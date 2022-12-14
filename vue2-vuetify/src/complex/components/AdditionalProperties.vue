@@ -14,7 +14,7 @@
             v-model="newPropertyName"
             :clearable="hover"
             :placeholder="placeholder"
-            :disabled="!control.enabled"
+            :disabled="!control.value.enabled"
             v-bind="vuetifyProps('v-text-field')"
           >
           </v-text-field>
@@ -49,11 +49,11 @@
             :schema="element.schema"
             :uischema="element.uischema"
             :path="element.path"
-            :enabled="control.enabled"
+            :enabled="control.value.enabled"
             :renderers="control.renderers"
             :cells="control.cells"
         /></v-col>
-        <v-col v-if="control.enabled" class="shrink">
+        <v-col v-if="control.value.enabled" class="shrink">
           <v-tooltip bottom>
             <template v-slot:activator="{ on: onTooltip }">
               <v-btn
@@ -169,10 +169,10 @@ export default defineComponent({
       typeof props.input.control
     >;
     const reservedPropertyNames = Object.keys(
-      control.value.schema.properties || {}
+      control.value.value.schema.properties || {}
     );
 
-    const additionalKeys = Object.keys(control.value.data).filter(
+    const additionalKeys = Object.keys(control.value.value.data).filter(
       (k) => !reservedPropertyNames.includes(k)
     );
 
@@ -183,20 +183,21 @@ export default defineComponent({
       let propSchema: JsonSchema | undefined = undefined;
       let propUiSchema: UISchemaElement | undefined = undefined;
 
-      if (control.value.schema.patternProperties) {
+      if (control.value.value.schema.patternProperties) {
         const matchedPattern = Object.keys(
-          control.value.schema.patternProperties
+          control.value.value.schema.patternProperties
         ).find((pattern) => new RegExp(pattern).test(propName));
         if (matchedPattern) {
-          propSchema = control.value.schema.patternProperties[matchedPattern];
+          propSchema =
+            control.value.value.schema.patternProperties[matchedPattern];
         }
       }
 
       if (
         !propSchema &&
-        typeof control.value.schema.additionalProperties === 'object'
+        typeof control.value.value.schema.additionalProperties === 'object'
       ) {
-        propSchema = control.value.schema.additionalProperties;
+        propSchema = control.value.value.schema.additionalProperties;
       }
 
       if (!propSchema && propValue !== undefined) {
@@ -218,14 +219,14 @@ export default defineComponent({
             propSchema.title ?? startCase(propName);
         } else {
           propUiSchema = createControlElement(
-            control.value.path + '/' + encode(propName)
+            control.value.value.path + '/' + encode(propName)
           );
         }
       }
 
       return {
         propertyName: propName,
-        path: composePaths(control.value.path, propName),
+        path: composePaths(control.value.value.path, propName),
         schema: propSchema,
         uischema: propUiSchema,
       };
@@ -237,12 +238,12 @@ export default defineComponent({
     additionalKeys.forEach((propName) => {
       const additionalProperty = toAdditionalPropertyType(
         propName,
-        control.value.data[propName]
+        control.value.value.data[propName]
       );
       additionalPropertyItems.value.push(additionalProperty);
     });
 
-    const styles = useStyles(control.value.uischema);
+    const styles = useStyles(control.value.value.uischema);
     const newPropertyName = ref<string | null>('');
     const ajv = useAjv();
 
@@ -252,17 +253,19 @@ export default defineComponent({
 
     // TODO: create issue against jsonforms to add propertyNames into the JsonSchema interface
     // propertyNames exist in draft-6 but not defined in the JsonSchema
-    if (typeof (control.value.schema as any).propertyNames === 'object') {
-      propertyNameSchema = (control.value.schema as any).propertyNames;
+    if (typeof (control.value.value.schema as any).propertyNames === 'object') {
+      propertyNameSchema = (control.value.value.schema as any).propertyNames;
     }
 
     if (
-      typeof control.value.schema.additionalProperties !== 'object' &&
-      typeof control.value.schema.patternProperties === 'object'
+      typeof control.value.value.schema.additionalProperties !== 'object' &&
+      typeof control.value.value.schema.patternProperties === 'object'
     ) {
       const matchPatternPropertiesKeys: JsonSchema7 = {
         type: 'string',
-        pattern: Object.keys(control.value.schema.patternProperties).join('|'),
+        pattern: Object.keys(control.value.value.schema.patternProperties).join(
+          '|'
+        ),
       };
 
       propertyNameSchema = propertyNameSchema
@@ -301,7 +304,7 @@ export default defineComponent({
     addPropertyDisabled(): boolean {
       return (
         // add is disabled because the overall control is disabled
-        !this.control.enabled ||
+        !this.control.value.enabled ||
         // add is disabled because of contraints
         (this.appliedOptions.restrict && this.maxPropertiesReached) ||
         // add is disabled because there are errors for the new property name or it is not specified
@@ -321,7 +324,7 @@ export default defineComponent({
     removePropertyDisabled(): boolean {
       return (
         // add is disabled because the overall control is disabled
-        !this.control.enabled ||
+        !this.control.value.enabled ||
         // add is disabled because of contraints
         (this.appliedOptions.restrict && this.minPropertiesReached)
       );

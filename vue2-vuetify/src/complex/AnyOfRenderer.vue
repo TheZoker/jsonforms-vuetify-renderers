@@ -70,7 +70,7 @@ const controlRenderer = defineComponent({
   setup(props: RendererProps<ControlElement>) {
     const input = useJsonFormsAnyOfControl(props);
     const control = (input.control as any).value as typeof input.control;
-    const selectedIndex = ref(control.indexOfFittingSchema || 0);
+    const selectedIndex = ref(control.value.indexOfFittingSchema || 0);
 
     return {
       ...useVuetifyControl(input),
